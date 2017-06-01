@@ -29,3 +29,14 @@ Ti.App.Sentry.captureEvent({
 });
 ```
 
+## More methods:
+
+// Record that a user sent a HTTP POST to example.com and it was successful.
+- [x] addHttpBreadcrumb("http://example.com", "POST", 200);
+
+// Record the fact that user clicked a button to go from the main menu to the
+// settings menu.
+- [x] addNavigationBreadcrumb("user.click", "main menu", "settings");
+
+// Record a general,  application specific event
+- [x] addBreadcrumb("user.state_change", "logged in");
