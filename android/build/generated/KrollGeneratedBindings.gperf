@@ -1,0 +1,16 @@
+%define lookup-function-name lookupGeneratedInit
+%define class-name SentryBindings
+%{
+
+#include <string.h>
+#include <v8.h>
+#include <KrollBindings.h>
+
+#include "ti.sentry.SentryModule.h"
+
+
+%}
+struct titanium::bindings::BindEntry;
+%%
+ti.sentry.SentryModule, ::ti::sentry::SentryModule::bindProxy, ::ti::sentry::SentryModule::dispose
+%%
