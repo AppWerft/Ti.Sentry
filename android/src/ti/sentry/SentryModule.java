@@ -27,7 +27,7 @@ import com.joshdholtz.sentry.Sentry.SentryEventBuilder;
 @Kroll.module(name = "Sentry", id = "ti.sentry")
 public class SentryModule extends KrollModule implements KrollExceptionHandler {
 	final int MSG_OPEN_ERROR_DIALOG = 1000;
-	boolean dialogShowing = false;
+	static String sentryDSN;
 
 	public SentryModule() {
 		super();
@@ -35,11 +35,15 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 
 	@Kroll.onAppCreate
 	public static void onAppCreate(TiApplication app) {
-		TiProperties appProperties = TiApplication.getInstance()
-				.getAppProperties();
-		String sentryDSN = appProperties.getString("SENTRY_DSN",
-				"YOUR-SENTRY-DSN");
-		Sentry.init(TiApplication.getInstance(), sentryDSN);
+		// TiApplication app = TiApplication.getInstance();
+		String TYPE = (app.getDeployType()
+				.equals(TiApplication.DEPLOY_TYPE_PRODUCTION)) ? "PRODUCTION"
+				: "DEVELOPMENT";
+
+		TiProperties appProperties = app.getAppProperties();
+		sentryDSN = appProperties.getString("SENTRY_DSN_" + TYPE, "");
+		if (sentryDSN != null)
+			Sentry.init(app, sentryDSN);
 	}
 
 	@Kroll.method
@@ -83,6 +87,7 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 		builder.addExtra("line", "" + error.line);
 		builder.addExtra("lineSource", error.lineSource);
 		builder.addExtra("lineOffset", "" + error.lineOffset);
+		builder.setTimestamp(System.currentTimeMillis());
 		builder.setUser(new JSONObject());
 		builder.setEnvironment("athome");
 		builder.setCulprit("culprit");
@@ -91,6 +96,8 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 
 	@Override
 	public void handleException(ExceptionMessage error) {
+		if (sentryDSN == null)
+			return;
 		if (TiApplication.isUIThread()) {
 			handleKrollError(error);
 		} else {

@@ -7,7 +7,8 @@ It is the axway android module for [sentry](https://github.com/joshdholtz/Sentry
 First you have to add an entry in your tiapp.xml:
 
 ```xml
-<property name="SENTRY_DSN" type="String">MY_SENTRY_DSN</property>
+<property name="SENTRY_DSN_PRODUCTION" type="String">MY_SENTRY_DSN</property>
+<property name="SENTRY_DSN_DEVELOPMENT" type="String">MY_SENTRY_DSN</property>
 ```
 
 In app.js:
