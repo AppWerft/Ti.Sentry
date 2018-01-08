@@ -8,17 +8,24 @@
  */
 package ti.sentry;
 
+import org.appcelerator.kroll.KrollApplication;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollExceptionHandler;
 import org.appcelerator.kroll.KrollModule;
+import org.appcelerator.kroll.KrollRuntime;
 import org.appcelerator.kroll.annotations.Kroll;
+import org.appcelerator.kroll.common.TiMessenger;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiProperties;
+
+import android.app.Activity;
 
 import com.joshdholtz.sentry.Sentry;
 
 @Kroll.module(name = "Sentry", id = "ti.sentry")
 public class SentryModule extends KrollModule implements KrollExceptionHandler {
+	final int MSG_OPEN_ERROR_DIALOG = 1000;
+	boolean dialogShowing = false;
 
 	public SentryModule() {
 		super();
@@ -66,9 +73,31 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 		Sentry.captureEvent(builder);
 	}
 
+	protected void handleError(ExceptionMessage error) {
+		KrollDict dict = new KrollDict();
+		dict.put("title", error.title);
+		dict.put("message", error.message);
+		dict.put("sourceName", error.sourceName);
+		dict.put("line", error.line);
+		dict.put("lineSource", error.lineSource);
+		dict.put("lineOffset", error.lineOffset);
+		TiApplication.getInstance().fireAppEvent("uncaughtException", dict);
+		TiApplication tiApplication = TiApplication.getInstance();
+		if (tiApplication.getDeployType().equals(
+				TiApplication.DEPLOY_TYPE_PRODUCTION)) {
+			return;
+		}
+
+	}
+
 	@Override
-	public void handleException(ExceptionMessage arg0) {
-		// TODO Auto-generated method stub
+	public void handleException(ExceptionMessage error) {
+		if (TiApplication.isUIThread()) {
+			handleError(error);
+		} else {
+			TiMessenger.sendBlockingMainMessage(
+					mainHandler.obtainMessage(MSG_OPEN_ERROR_DIALOG), error);
+		}
 
 	}
 
