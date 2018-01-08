@@ -17,10 +17,12 @@ import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.TiMessenger;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiProperties;
+import org.json.JSONObject;
 
 import android.app.Activity;
 
 import com.joshdholtz.sentry.Sentry;
+import com.joshdholtz.sentry.Sentry.SentryEventBuilder;
 
 @Kroll.module(name = "Sentry", id = "ti.sentry")
 public class SentryModule extends KrollModule implements KrollExceptionHandler {
@@ -73,27 +75,24 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 		Sentry.captureEvent(builder);
 	}
 
-	protected void handleError(ExceptionMessage error) {
-		KrollDict dict = new KrollDict();
-		dict.put("title", error.title);
-		dict.put("message", error.message);
-		dict.put("sourceName", error.sourceName);
-		dict.put("line", error.line);
-		dict.put("lineSource", error.lineSource);
-		dict.put("lineOffset", error.lineOffset);
-		TiApplication.getInstance().fireAppEvent("uncaughtException", dict);
-		TiApplication tiApplication = TiApplication.getInstance();
-		if (tiApplication.getDeployType().equals(
-				TiApplication.DEPLOY_TYPE_PRODUCTION)) {
-			return;
-		}
-
+	protected void handleKrollError(ExceptionMessage error) {
+		SentryEventBuilder builder = new SentryEventBuilder();
+		builder.addExtra("title", error.title);
+		builder.addExtra("message", error.message);
+		builder.addExtra("sourceName", error.sourceName);
+		builder.addExtra("line", "" + error.line);
+		builder.addExtra("lineSource", error.lineSource);
+		builder.addExtra("lineOffset", "" + error.lineOffset);
+		builder.setUser(new JSONObject());
+		builder.setEnvironment("athome");
+		builder.setCulprit("culprit");
+		Sentry.captureEvent(builder);
 	}
 
 	@Override
 	public void handleException(ExceptionMessage error) {
 		if (TiApplication.isUIThread()) {
-			handleError(error);
+			handleKrollError(error);
 		} else {
 			TiMessenger.sendBlockingMainMessage(
 					mainHandler.obtainMessage(MSG_OPEN_ERROR_DIALOG), error);
