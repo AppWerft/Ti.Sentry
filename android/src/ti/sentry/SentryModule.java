@@ -9,24 +9,16 @@
 package ti.sentry;
 
 import org.appcelerator.kroll.KrollDict;
+import org.appcelerator.kroll.KrollExceptionHandler;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiProperties;
-import org.appcelerator.kroll.common.Log;
-import org.appcelerator.kroll.common.TiConfig;
 
 import com.joshdholtz.sentry.Sentry;
 
 @Kroll.module(name = "Sentry", id = "ti.sentry")
-public class SentryModule extends KrollModule {
-
-	// Standard Debugging variables
-	private static final String LCAT = "SentryModule";
-	private static final boolean DBG = TiConfig.LOGD;
-
-	// You can define constants with @Kroll.constant, for example:
-	// @Kroll.constant public static final String EXTERNAL_NAME = value;
+public class SentryModule extends KrollModule implements KrollExceptionHandler {
 
 	public SentryModule() {
 		super();
@@ -63,10 +55,15 @@ public class SentryModule extends KrollModule {
 
 	@Kroll.method
 	public void captureEvent(KrollDict kd) {
-		Sentry.captureEvent(new Sentry.SentryEventBuilder()
-				.setMessage(kd.getString("message"))
-				.setCulprit(kd.getString("culprit"))
-				.setTimestamp(System.currentTimeMillis()));
+		Sentry.SentryEventBuilder builder = new Sentry.SentryEventBuilder();
+		if (kd.containsKeyAndNotNull("message"))
+			builder.setMessage(kd.getString("message"));
+		if (kd.containsKeyAndNotNull("culprit"))
+			builder.setCulprit(kd.getString("culprit"));
+		if (kd.containsKeyAndNotNull("release"))
+			builder.setRelease(kd.getString("release"));
+		builder.setTimestamp(System.currentTimeMillis());
+		Sentry.captureEvent(builder);
 	}
 
 }
