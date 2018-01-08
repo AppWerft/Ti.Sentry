@@ -66,4 +66,10 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 		Sentry.captureEvent(builder);
 	}
 
+	@Override
+	public void handleException(ExceptionMessage arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
 }
