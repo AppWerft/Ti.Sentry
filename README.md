@@ -1,10 +1,10 @@
 # Ti.Sentry
 
-<img width="60" src="https://seeklogo.com/images/S/sentry-logo-32188C6881-seeklogo.com.png" > 
+<img width="260" src="https://camo.githubusercontent.com/2dfeafbee0904d6df16ddf7200993dace1629e60/68747470733a2f2f73656e7472792d6272616e642e73746f726167652e676f6f676c65617069732e636f6d2f73656e7472792d6c6f676f2d626c61636b2e706e67" > 
 
 It is the Axway Titanium module for [sentry](https://github.com/joshdholtz/Sentry-Android).
 
-Open-source error tracking that helps developers monitor and fix crashes in real time. Iterate continuously. Boost efficiency. Improve user experience. 
+	Open-source error tracking that helps developers monitor and fix crashes in real time. Iterate continuously. Boost efficiency. Improve user experience. 
 
 ## How to use
 
