@@ -10,6 +10,9 @@
 #import "TiHost.h"
 #import "TiUtils.h"
 
+static NSString* sentryDSN = @"";
+
+
 @implementation TiSentryModule
 
 #pragma mark Internal
@@ -26,6 +29,14 @@
   return @"ti.sentry";
 }
 
+- (void)errored:(NSNotification *)notification
+{
+ //   if ([self _hasListeners:@"uncaughtException"]) {
+ //       [self fireEvent:@"uncaughtException" withObject:[notification userInfo]];
+  //  }
+}
+
+
 #pragma mark Lifecycle
 
 - (void)startup
@@ -34,28 +45,32 @@
   // You *must* call the superclass
   [super startup];
   DebugLog(@"[DEBUG] %@ loaded", self);
+  // importing from tiapp.xml
+  // first detecting PRODUCTION/DEVELOPMENT TYPE
 }
 
 #pragma Public APIs
-
-- (NSString *)example:(id)args
+- (void)captureMessage:(id)value
 {
-  // Example method. 
-  // Call with "MyModule.example(args)"
-  return @"hello world";
 }
 
-- (NSString *)exampleProp
+
+- (void)captureEvent:(id)value
 {
-  // Example property getter. 
-  // Call with "MyModule.exampleProp" or "MyModule.getExampleProp()"
-  return @"Titanium rocks!";
 }
 
-- (void)setExampleProp:(id)value
-{
-  // Example property setter. 
-  // Call with "MyModule.exampleProp = 'newValue'" or "MyModule.setExampleProp('newValue')"
+- (void)startCrashReporting {
+    WARN_IF_BACKGROUND_THREAD_OBJ; //NSNotificationCenter is not threadsafe!
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(errored:) name:kTiErrorNotification object:nil];
+}
+
+- (void)stopCrashReporting {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)setDSN:(id)value {
+    ENSURE_STRING(value);
+    sentryDSN = value;
 }
 
 @end
