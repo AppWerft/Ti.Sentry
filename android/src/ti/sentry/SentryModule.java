@@ -8,29 +8,51 @@
  */
 package ti.sentry;
 
-import org.appcelerator.kroll.KrollApplication;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollExceptionHandler;
 import org.appcelerator.kroll.KrollModule;
-import org.appcelerator.kroll.KrollRuntime;
 import org.appcelerator.kroll.annotations.Kroll;
+import org.appcelerator.kroll.common.AsyncResult;
 import org.appcelerator.kroll.common.TiMessenger;
 import org.appcelerator.titanium.TiApplication;
 import org.appcelerator.titanium.TiProperties;
 import org.json.JSONObject;
 
-import android.app.Activity;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Handler;
+import android.os.Message;
 
 import com.joshdholtz.sentry.Sentry;
 import com.joshdholtz.sentry.Sentry.SentryEventBuilder;
 
 @Kroll.module(name = "Sentry", id = "ti.sentry")
-public class SentryModule extends KrollModule implements KrollExceptionHandler {
+public class SentryModule extends KrollModule implements Handler.Callback,
+		KrollExceptionHandler {
 	final int MSG_OPEN_ERROR_DIALOG = 1000;
-	static String sentryDSN;
+	private static String sentryDSN;
+	private static Handler mainHandler;
 
 	public SentryModule() {
 		super();
+		mainHandler = new Handler(TiMessenger.getMainMessenger().getLooper(),
+				this);
+	}
+
+	public boolean handleMessage(Message msg) {
+		switch (msg.what) {
+		case MSG_OPEN_ERROR_DIALOG:
+			AsyncResult asyncResult = (AsyncResult) msg.obj;
+			ExceptionMessage errorMessage = (ExceptionMessage) asyncResult
+					.getArg();
+			handleKrollError(errorMessage);
+			asyncResult.setResult(null);
+			return true;
+		default:
+			break;
+		}
+
+		return false;
 	}
 
 	@Kroll.onAppCreate
@@ -89,8 +111,19 @@ public class SentryModule extends KrollModule implements KrollExceptionHandler {
 		builder.addExtra("lineOffset", "" + error.lineOffset);
 		builder.setTimestamp(System.currentTimeMillis());
 		builder.setUser(new JSONObject());
-		builder.setEnvironment("athome");
-		builder.setCulprit("culprit");
+		builder.setEnvironment(android.os.Build.VERSION.CODENAME);
+		try {
+			PackageInfo info = TiApplication
+					.getInstance()
+					.getApplicationContext()
+					.getPackageManager()
+					.getPackageInfo(
+							TiApplication.getInstance().getPackageName(), 0);
+			builder.addTag("version", info.versionName);
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+		}
+
 		Sentry.captureEvent(builder);
 	}
 
