@@ -29,9 +29,12 @@ private:
 	static v8::Persistent<v8::FunctionTemplate> proxyTemplate;
 
 	// Methods -----------------------------------------------------------
+	static void stopCrashReporting(const v8::FunctionCallbackInfo<v8::Value>&);
+	static void startCrashReporting(const v8::FunctionCallbackInfo<v8::Value>&);
 	static void captureMessage(const v8::FunctionCallbackInfo<v8::Value>&);
 	static void addBreadcrumb(const v8::FunctionCallbackInfo<v8::Value>&);
 	static void addNavigationBreadcrumb(const v8::FunctionCallbackInfo<v8::Value>&);
+	static void setDSN(const v8::FunctionCallbackInfo<v8::Value>&);
 	static void addHttpBreadcrumb(const v8::FunctionCallbackInfo<v8::Value>&);
 	static void captureEvent(const v8::FunctionCallbackInfo<v8::Value>&);
 

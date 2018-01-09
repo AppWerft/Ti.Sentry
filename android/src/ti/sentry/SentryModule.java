@@ -30,7 +30,7 @@ import com.joshdholtz.sentry.Sentry.SentryEventBuilder;
 @Kroll.module(name = "Sentry", id = "ti.sentry")
 public class SentryModule extends KrollModule implements Handler.Callback,
 		KrollExceptionHandler {
-	final int MSG_OPEN_ERROR_DIALOG = 1000;
+	final int MSG_KROLL_CRASH = 1000;
 	private static String sentryDSN;
 	private static Handler mainHandler;
 
@@ -41,7 +41,7 @@ public class SentryModule extends KrollModule implements Handler.Callback,
 
 	public boolean handleMessage(Message msg) {
 		switch (msg.what) {
-		case MSG_OPEN_ERROR_DIALOG:
+		case MSG_KROLL_CRASH:
 			AsyncResult asyncResult = (AsyncResult) msg.obj;
 			ExceptionMessage errorMessage = (ExceptionMessage) asyncResult
 					.getArg();
@@ -79,12 +79,18 @@ public class SentryModule extends KrollModule implements Handler.Callback,
 					handleKrollError(error);
 				} else {
 					TiMessenger.sendBlockingMainMessage(
-							mainHandler.obtainMessage(MSG_OPEN_ERROR_DIALOG),
-							error);
+							mainHandler.obtainMessage(MSG_KROLL_CRASH), error);
 				}
 			}
 		};
 		KrollRuntime.addAdditionalExceptionHandler(handler, "myKEY");
+	}
+
+	@Kroll.method
+	public void setDSN(String dsn) {
+		sentryDSN = dsn;
+		Sentry.init(TiApplication.getInstance(), sentryDSN);
+
 	}
 
 	@Kroll.method
@@ -159,7 +165,7 @@ public class SentryModule extends KrollModule implements Handler.Callback,
 			handleKrollError(error);
 		} else {
 			TiMessenger.sendBlockingMainMessage(
-					mainHandler.obtainMessage(MSG_OPEN_ERROR_DIALOG), error);
+					mainHandler.obtainMessage(MSG_KROLL_CRASH), error);
 		}
 
 	}

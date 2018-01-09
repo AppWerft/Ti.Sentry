@@ -92,9 +92,12 @@ Local<FunctionTemplate> SentryModule::getProxyTemplate(Isolate* isolate)
 		FunctionTemplate::New(isolate, titanium::Proxy::inherit<SentryModule>));
 
 	// Method bindings --------------------------------------------------------
+	titanium::SetProtoMethod(isolate, t, "stopCrashReporting", SentryModule::stopCrashReporting);
+	titanium::SetProtoMethod(isolate, t, "startCrashReporting", SentryModule::startCrashReporting);
 	titanium::SetProtoMethod(isolate, t, "captureMessage", SentryModule::captureMessage);
 	titanium::SetProtoMethod(isolate, t, "addBreadcrumb", SentryModule::addBreadcrumb);
 	titanium::SetProtoMethod(isolate, t, "addNavigationBreadcrumb", SentryModule::addNavigationBreadcrumb);
+	titanium::SetProtoMethod(isolate, t, "setDSN", SentryModule::setDSN);
 	titanium::SetProtoMethod(isolate, t, "addHttpBreadcrumb", SentryModule::addHttpBreadcrumb);
 	titanium::SetProtoMethod(isolate, t, "captureEvent", SentryModule::captureEvent);
 
@@ -115,6 +118,106 @@ Local<FunctionTemplate> SentryModule::getProxyTemplate(Isolate* isolate)
 }
 
 // Methods --------------------------------------------------------------------
+void SentryModule::stopCrashReporting(const FunctionCallbackInfo<Value>& args)
+{
+	LOGD(TAG, "stopCrashReporting()");
+	Isolate* isolate = args.GetIsolate();
+	HandleScope scope(isolate);
+
+	JNIEnv *env = titanium::JNIScope::getEnv();
+	if (!env) {
+		titanium::JSException::GetJNIEnvironmentError(isolate);
+		return;
+	}
+	static jmethodID methodID = NULL;
+	if (!methodID) {
+		methodID = env->GetMethodID(SentryModule::javaClass, "stopCrashReporting", "()V");
+		if (!methodID) {
+			const char *error = "Couldn't find proxy method 'stopCrashReporting' with signature '()V'";
+			LOGE(TAG, error);
+				titanium::JSException::Error(isolate, error);
+				return;
+		}
+	}
+
+	Local<Object> holder = args.Holder();
+	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
+	if (!JavaObject::isJavaObject(holder)) {
+		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
+	}
+
+	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+
+	jvalue* jArguments = 0;
+
+	jobject javaProxy = proxy->getJavaObject();
+	env->CallVoidMethodA(javaProxy, methodID, jArguments);
+
+	proxy->unreferenceJavaObject(javaProxy);
+
+
+
+	if (env->ExceptionCheck()) {
+		titanium::JSException::fromJavaException(isolate);
+		env->ExceptionClear();
+	}
+
+
+
+
+	args.GetReturnValue().Set(v8::Undefined(isolate));
+
+}
+void SentryModule::startCrashReporting(const FunctionCallbackInfo<Value>& args)
+{
+	LOGD(TAG, "startCrashReporting()");
+	Isolate* isolate = args.GetIsolate();
+	HandleScope scope(isolate);
+
+	JNIEnv *env = titanium::JNIScope::getEnv();
+	if (!env) {
+		titanium::JSException::GetJNIEnvironmentError(isolate);
+		return;
+	}
+	static jmethodID methodID = NULL;
+	if (!methodID) {
+		methodID = env->GetMethodID(SentryModule::javaClass, "startCrashReporting", "()V");
+		if (!methodID) {
+			const char *error = "Couldn't find proxy method 'startCrashReporting' with signature '()V'";
+			LOGE(TAG, error);
+				titanium::JSException::Error(isolate, error);
+				return;
+		}
+	}
+
+	Local<Object> holder = args.Holder();
+	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
+	if (!JavaObject::isJavaObject(holder)) {
+		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
+	}
+
+	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+
+	jvalue* jArguments = 0;
+
+	jobject javaProxy = proxy->getJavaObject();
+	env->CallVoidMethodA(javaProxy, methodID, jArguments);
+
+	proxy->unreferenceJavaObject(javaProxy);
+
+
+
+	if (env->ExceptionCheck()) {
+		titanium::JSException::fromJavaException(isolate);
+		env->ExceptionClear();
+	}
+
+
+
+
+	args.GetReturnValue().Set(v8::Undefined(isolate));
+
+}
 void SentryModule::captureMessage(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "captureMessage()");
@@ -372,6 +475,81 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 
 
 				env->DeleteLocalRef(jArguments[2].l);
+
+
+	if (env->ExceptionCheck()) {
+		titanium::JSException::fromJavaException(isolate);
+		env->ExceptionClear();
+	}
+
+
+
+
+	args.GetReturnValue().Set(v8::Undefined(isolate));
+
+}
+void SentryModule::setDSN(const FunctionCallbackInfo<Value>& args)
+{
+	LOGD(TAG, "setDSN()");
+	Isolate* isolate = args.GetIsolate();
+	HandleScope scope(isolate);
+
+	JNIEnv *env = titanium::JNIScope::getEnv();
+	if (!env) {
+		titanium::JSException::GetJNIEnvironmentError(isolate);
+		return;
+	}
+	static jmethodID methodID = NULL;
+	if (!methodID) {
+		methodID = env->GetMethodID(SentryModule::javaClass, "setDSN", "(Ljava/lang/String;)V");
+		if (!methodID) {
+			const char *error = "Couldn't find proxy method 'setDSN' with signature '(Ljava/lang/String;)V'";
+			LOGE(TAG, error);
+				titanium::JSException::Error(isolate, error);
+				return;
+		}
+	}
+
+	Local<Object> holder = args.Holder();
+	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
+	if (!JavaObject::isJavaObject(holder)) {
+		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
+	}
+
+	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+
+	if (args.Length() < 1) {
+		char errorStringBuffer[100];
+		sprintf(errorStringBuffer, "setDSN: Invalid number of arguments. Expected 1 but got %d", args.Length());
+		titanium::JSException::Error(isolate, errorStringBuffer);
+		return;
+	}
+
+	jvalue jArguments[1];
+
+
+
+
+	
+
+	if (!args[0]->IsNull()) {
+		Local<Value> arg_0 = args[0];
+		jArguments[0].l =
+			titanium::TypeConverter::jsValueToJavaString(
+				isolate,
+				env, arg_0);
+	} else {
+		jArguments[0].l = NULL;
+	}
+
+	jobject javaProxy = proxy->getJavaObject();
+	env->CallVoidMethodA(javaProxy, methodID, jArguments);
+
+	proxy->unreferenceJavaObject(javaProxy);
+
+
+
+				env->DeleteLocalRef(jArguments[0].l);
 
 
 	if (env->ExceptionCheck()) {
