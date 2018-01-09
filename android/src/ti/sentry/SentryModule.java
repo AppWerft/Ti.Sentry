@@ -31,7 +31,7 @@ import com.joshdholtz.sentry.Sentry.SentryEventBuilder;
 public class SentryModule extends KrollModule implements Handler.Callback,
 		KrollExceptionHandler {
 	final int MSG_KROLL_CRASH = 1000;
-	private static String sentryDSN;
+	private static String sentryDSN = "https://<key>:<secret>@sentry.io/";
 	private static Handler mainHandler;
 
 	public SentryModule() {

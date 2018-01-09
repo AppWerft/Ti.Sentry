@@ -17,6 +17,8 @@ First you have to add an entry in your tiapp.xml to reference your creds:
 <property name="SENTRY_DSN_DEVELOPMENT" type="String">MY_SENTRY_DSN</property>
 ```
 
+DSN is in form of `https://<key>:<secret>@sentry.io/`
+
 In app.js you can add a reference to module:
 
 ```javascript

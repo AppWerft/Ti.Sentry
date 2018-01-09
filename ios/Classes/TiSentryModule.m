@@ -9,9 +9,10 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
+@import Sentry;
 
 static NSString* sentryDSN = @"";
-
+SentryClient *client;
 
 @implementation TiSentryModule
 
@@ -47,16 +48,22 @@ static NSString* sentryDSN = @"";
   DebugLog(@"[DEBUG] %@ loaded", self);
   // importing from tiapp.xml
   // first detecting PRODUCTION/DEVELOPMENT TYPE
+    NSError *error = nil;
+    client = [[SentryClient alloc] initWithDsn:@"https://<key>:<secret>@sentry.io/<project>" didFailWithError:&error];
+    SentryClient.sharedClient = client;
+    [SentryClient.sharedClient startCrashHandlerWithError:&error];
+    if (nil != error) {
+        NSLog(@"%@", error);
+    }
 }
 
 #pragma Public APIs
-- (void)captureMessage:(id)value
-{
+- (void)captureMessage:(id)value {
+    
 }
 
 
-- (void)captureEvent:(id)value
-{
+- (void)captureEvent:(id)value {
 }
 
 - (void)startCrashReporting {
