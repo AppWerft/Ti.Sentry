@@ -1,6 +1,6 @@
 /**
  * Appcelerator Titanium Mobile
- * Copyright (c) 2011 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2011-2016 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
  *
@@ -10,6 +10,8 @@
 #include <v8.h>
 
 #include <AndroidUtil.h>
+#include <JNIUtil.h>
+#include <JSException.h>
 #include <KrollBindings.h>
 #include <V8Util.h>
 
@@ -22,82 +24,92 @@ using namespace v8;
 
 static Persistent<Object> bindingCache;
 
-static Handle<Value> Sentry_getBinding(const Arguments& args)
+static void Sentry_getBinding(const FunctionCallbackInfo<Value>& args)
 {
-	HandleScope scope;
+	Isolate* isolate = args.GetIsolate();
+	EscapableHandleScope scope(isolate);
 
 	if (args.Length() == 0) {
-		return ThrowException(Exception::Error(String::New("Sentry.getBinding requires 1 argument: binding")));
+		titanium::JSException::Error(isolate, "Sentry.getBinding requires 1 argument: binding");
+		args.GetReturnValue().Set(scope.Escape(Undefined(isolate)));
+		return;
 	}
 
+	Local<Object> cache;
 	if (bindingCache.IsEmpty()) {
-		bindingCache = Persistent<Object>::New(Object::New());
+		cache = Object::New(isolate);
+		bindingCache.Reset(isolate, cache);
+	} else {
+		cache = bindingCache.Get(isolate);
 	}
 
-	Handle<String> binding = args[0]->ToString();
+	Local<String> binding = args[0]->ToString(isolate);
 
-	if (bindingCache->Has(binding)) {
-		return bindingCache->Get(binding);
+	if (cache->Has(binding)) {
+		args.GetReturnValue().Set(scope.Escape(cache->Get(binding)));
+		return;
 	}
 
-	String::Utf8Value bindingValue(binding);
-
+	v8::String::Utf8Value bindingValue(binding);
 	LOGD(TAG, "Looking up binding: %s", *bindingValue);
 
-	titanium::bindings::BindEntry *extBinding = ::SentryBindings::lookupGeneratedInit(
+	titanium::bindings::BindEntry *extBinding = titanium::bindings::SentryBindings::lookupGeneratedInit(
 		*bindingValue, bindingValue.length());
 
 	if (!extBinding) {
 		LOGE(TAG, "Couldn't find binding: %s, returning undefined", *bindingValue);
-		return Undefined();
+		args.GetReturnValue().Set(scope.Escape(Undefined(isolate)));
+		return;
 	}
 
-	Handle<Object> exports = Object::New();
-	extBinding->bind(exports);
-	bindingCache->Set(binding, exports);
+	Local<Object> exports = Object::New(isolate);
+	extBinding->bind(exports, isolate->GetCurrentContext());
+	cache->Set(binding, exports);
 
-	return exports;
+	args.GetReturnValue().Set(scope.Escape(exports));
+	return;
 }
 
-static void Sentry_init(Handle<Object> exports)
+static void Sentry_init(Local<Object> exports, Local<Context> context)
 {
-	HandleScope scope;
+	Isolate* isolate = context->GetIsolate();
+	HandleScope scope(isolate);
 
 	for (int i = 0; titanium::natives[i].name; ++i) {
-		Local<String> name = String::New(titanium::natives[i].name);
-		Handle<String> source = IMMUTABLE_STRING_LITERAL_FROM_ARRAY(
+		Local<String> name = String::NewFromUtf8(isolate, titanium::natives[i].name);
+		Local<String> source = IMMUTABLE_STRING_LITERAL_FROM_ARRAY(isolate,
 			titanium::natives[i].source, titanium::natives[i].source_length);
 
 		exports->Set(name, source);
 	}
 
-	exports->Set(String::New("getBinding"), FunctionTemplate::New(Sentry_getBinding)->GetFunction());
+	Local<FunctionTemplate> constructor = FunctionTemplate::New(isolate, Sentry_getBinding);
+	exports->Set(String::NewFromUtf8(isolate, "getBinding"), constructor->GetFunction(context).ToLocalChecked());
 }
 
-static void Sentry_dispose()
+static void Sentry_dispose(Isolate* isolate)
 {
-	HandleScope scope;
+	HandleScope scope(isolate);
 	if (bindingCache.IsEmpty()) {
 		return;
 	}
 
-	Local<Array> propertyNames = bindingCache->GetPropertyNames();
+	Local<Array> propertyNames = bindingCache.Get(isolate)->GetPropertyNames();
 	uint32_t length = propertyNames->Length();
 
 	for (uint32_t i = 0; i < length; ++i) {
-		String::Utf8Value binding(propertyNames->Get(i));
+		v8::String::Utf8Value binding(propertyNames->Get(i));
 		int bindingLength = binding.length();
 
 		titanium::bindings::BindEntry *extBinding =
-			::SentryBindings::lookupGeneratedInit(*binding, bindingLength);
+			titanium::bindings::SentryBindings::lookupGeneratedInit(*binding, bindingLength);
 
 		if (extBinding && extBinding->dispose) {
-			extBinding->dispose();
+			extBinding->dispose(isolate);
 		}
 	}
 
-	bindingCache.Dispose();
-	bindingCache = Persistent<Object>();
+	bindingCache.Reset();
 }
 
 static titanium::bindings::BindEntry SentryBinding = {
@@ -112,5 +124,5 @@ Java_ti_sentry_SentryBootstrap_nativeBootstrap
 	(JNIEnv *env, jobject self)
 {
 	titanium::KrollBindings::addExternalBinding("ti.sentry", &SentryBinding);
-	titanium::KrollBindings::addExternalLookup(&(::SentryBindings::lookupGeneratedInit));
+	titanium::KrollBindings::addExternalLookup(&(titanium::bindings::SentryBindings::lookupGeneratedInit));
 }

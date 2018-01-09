@@ -2,9 +2,9 @@
 # this is your module manifest and used by Titanium
 # during compilation, packaging, distribution, etc.
 #
-version: 1.0.0
-apiversion: 2
-architectures: armeabi armeabi-v7a x86
+version: 2.0.0
+apiversion: 4
+architectures: arm64-v8a armeabi-v7a x86
 description: sentry
 author: Rainer Knöterich
 license: Specify your license
@@ -15,4 +15,4 @@ name: sentry
 moduleid: ti.sentry
 guid: 96adf80e-ac3e-4fbd-a336-b669e698d807
 platform: android
-minsdk: 5.5.1.GA
+minsdk: 7.0.0.GA

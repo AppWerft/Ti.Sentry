@@ -11,6 +11,7 @@ package ti.sentry;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollExceptionHandler;
 import org.appcelerator.kroll.KrollModule;
+import org.appcelerator.kroll.KrollRuntime;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.AsyncResult;
 import org.appcelerator.kroll.common.TiMessenger;
@@ -35,8 +36,7 @@ public class SentryModule extends KrollModule implements Handler.Callback,
 
 	public SentryModule() {
 		super();
-		mainHandler = new Handler(TiMessenger.getMainMessenger().getLooper(),
-				this);
+
 	}
 
 	public boolean handleMessage(Message msg) {
@@ -66,6 +66,30 @@ public class SentryModule extends KrollModule implements Handler.Callback,
 		sentryDSN = appProperties.getString("SENTRY_DSN_" + TYPE, "");
 		if (sentryDSN != null)
 			Sentry.init(app, sentryDSN);
+	}
+
+	@Kroll.method
+	public void startCrashReporting() {
+		KrollExceptionHandler handler = new KrollExceptionHandler() {
+			@Override
+			public void handleException(ExceptionMessage error) {
+				if (sentryDSN == null)
+					return;
+				if (TiApplication.isUIThread()) {
+					handleKrollError(error);
+				} else {
+					TiMessenger.sendBlockingMainMessage(
+							mainHandler.obtainMessage(MSG_OPEN_ERROR_DIALOG),
+							error);
+				}
+			}
+		};
+		KrollRuntime.addAdditionalExceptionHandler(handler, "myKEY");
+	}
+
+	@Kroll.method
+	public void stopCrashReporting() {
+		KrollRuntime.removeExceptionHandler("myKEY");
 	}
 
 	@Kroll.method
