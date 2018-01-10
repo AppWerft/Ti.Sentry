@@ -9,7 +9,12 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
+#import "TiAppPropertiesProxy.h"
+#import "TiApp.h"
+
 #import <Sentry/Sentry.h>
+
+extern NSString *const TI_APPLICATION_DEPLOYTYPE;
 
 static NSString* sentryDSN = @"";
 SentryClient *client;
@@ -40,14 +45,19 @@ SentryClient *client;
 
 #pragma mark Lifecycle
 
-- (void)startup
-{
-    // This method is called when the module is first loaded
-    // You *must* call the superclass
+- (void)startup {
+   
     [super startup];
+    NSString *key = @"";
     DebugLog(@"[DEBUG] %@ loaded", self);
-    // importing from tiapp.xml
+    // importing properties from tiapp.xml
     // first detecting PRODUCTION/DEVELOPMENT TYPE
+    
+    if ([TI_APPLICATION_DEPLOYTYPE isEqualToString:@"production"]) {
+       
+    } else {
+        
+    }
     NSError *error = nil;
     client = [[SentryClient alloc] initWithDsn:@"https://<key>:<secret>@sentry.io/<project>" didFailWithError:&error];
     SentryClient.sharedClient = client;
