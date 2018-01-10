@@ -1,6 +1,0 @@
-framework module Pods_Sentry {
-  umbrella header "Pods-Sentry-umbrella.h"
-
-  export *
-  module * { export * }
-}

@@ -1,5 +1,5 @@
 /**
- * sentry
+ * tisentry
  *
  * Created by Rainer
  * Copyright (c) 2018 Your Company. All rights reserved.
@@ -9,7 +9,7 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
-@import Sentry;
+#import <Sentry/Sentry.h>
 
 static NSString* sentryDSN = @"";
 SentryClient *client;
@@ -21,20 +21,20 @@ SentryClient *client;
 // This is generated for your module, please do not change it
 - (id)moduleGUID
 {
-  return @"657cc031-0745-49ed-bfeb-a98d76cf0e91";
+   return @"9097e533-e444-4e24-bcd9-c04586ae17e2";
 }
 
 // This is generated for your module, please do not change it
 - (NSString *)moduleId
 {
-  return @"ti.sentry";
+    return @"ti.sentry";
 }
 
 - (void)errored:(NSNotification *)notification
 {
- //   if ([self _hasListeners:@"uncaughtException"]) {
- //       [self fireEvent:@"uncaughtException" withObject:[notification userInfo]];
-  //  }
+    //   if ([self _hasListeners:@"uncaughtException"]) {
+    //       [self fireEvent:@"uncaughtException" withObject:[notification userInfo]];
+    //  }
 }
 
 
@@ -42,12 +42,12 @@ SentryClient *client;
 
 - (void)startup
 {
-  // This method is called when the module is first loaded
-  // You *must* call the superclass
-  [super startup];
-  DebugLog(@"[DEBUG] %@ loaded", self);
-  // importing from tiapp.xml
-  // first detecting PRODUCTION/DEVELOPMENT TYPE
+    // This method is called when the module is first loaded
+    // You *must* call the superclass
+    [super startup];
+    DebugLog(@"[DEBUG] %@ loaded", self);
+    // importing from tiapp.xml
+    // first detecting PRODUCTION/DEVELOPMENT TYPE
     NSError *error = nil;
     client = [[SentryClient alloc] initWithDsn:@"https://<key>:<secret>@sentry.io/<project>" didFailWithError:&error];
     SentryClient.sharedClient = client;

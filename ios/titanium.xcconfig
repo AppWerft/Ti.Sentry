@@ -14,6 +14,11 @@ TITANIUM_BASE_SDK = "$(TITANIUM_SDK)/iphone/include"
 TITANIUM_BASE_SDK2 = "$(TITANIUM_SDK)/iphone/include/TiCore"
 TITANIUM_BASE_SDK3 = "$(TITANIUM_SDK)/iphone/include/JavaScriptCore"
 HEADER_SEARCH_PATHS= $(TITANIUM_BASE_SDK) $(TITANIUM_BASE_SDK2) $(TITANIUM_BASE_SDK3)
-#include "Pods/Target Support Files/Pods-Sentry/Pods-Sentry.debug.xcconfig"
+
+// Support Cocoapods
+#include "Pods/Target Support Files/Pods-tisentry/Pods-tisentry.debug.xcconfig"
+#include "Pods/Target Support Files/Pods-tisentry/Pods-tisentry.release.xcconfig"
+
+HEADER_SEARCH_PATHS = $(inherited) $(TITANIUM_BASE_SDK) $(TITANIUM_BASE_SDK2)
 
 

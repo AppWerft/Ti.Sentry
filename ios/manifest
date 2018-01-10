@@ -5,14 +5,14 @@
 version: 1.0.0
 apiversion: 2
 architectures: armv7 arm64 i386 x86_64
-description: sentry
+description: tisentry
 author: Rainer
 license: Specify your license
 copyright: Copyright (c) 2018 by Your Company
 
 # these should not be edited
-name: sentry
+name: tisentry
 moduleid: ti.sentry
-guid: 657cc031-0745-49ed-bfeb-a98d76cf0e91
+guid: 9097e533-e444-4e24-bcd9-c04586ae17e2
 platform: iphone
 minsdk: 7.0.1.GA
