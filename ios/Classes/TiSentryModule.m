@@ -9,6 +9,7 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
+#import "AppModule.h"
 #import "TiAppPropertiesProxy.h"
 #import "TiApp.h"
 
@@ -20,6 +21,8 @@ static NSString* sentryDSN = @"";
 SentryClient *client;
 
 @implementation TiSentryModule
+
+
 
 #pragma mark Internal
 
@@ -43,23 +46,24 @@ SentryClient *client;
 }
 
 
+
 #pragma mark Lifecycle
 
 - (void)startup {
    
     [super startup];
-    NSString *key = @"";
-    DebugLog(@"[DEBUG] %@ loaded", self);
-    // importing properties from tiapp.xml
-    // first detecting PRODUCTION/DEVELOPMENT TYPE
-    
-    if ([TI_APPLICATION_DEPLOYTYPE isEqualToString:@"production"]) {
-       
-    } else {
-        
-    }
+    NSString *key = nil;
     NSError *error = nil;
-    client = [[SentryClient alloc] initWithDsn:@"https://<key>:<secret>@sentry.io/<project>" didFailWithError:&error];
+    // detecting PRODUCTION/DEVELOPMENT TYPE
+    if ([TI_APPLICATION_DEPLOYTYPE isEqualToString:@"production"]) {
+        key = @"SENTRY_DSN_PRODUCTION";
+    } else {
+        key = @"SENTRY_DSN_DEVELOPMENT";
+    }
+    // importing properties from tiapp.xml
+    sentryDSN = [[TiApp tiAppProperties] objectForKey:key];
+    
+    client = [[SentryClient alloc] initWithDsn:sentryDSN didFailWithError:&error];
     SentryClient.sharedClient = client;
     [SentryClient.sharedClient startCrashHandlerWithError:&error];
     if (nil != error) {
@@ -69,11 +73,16 @@ SentryClient *client;
 
 #pragma Public APIs
 - (void)captureMessage:(id)value {
-    
+    if (client != nil) {
+        [Sentry logInfo:value];
+    }
 }
 
 
 - (void)captureEvent:(id)value {
+    if (client != nil) {
+        [SentryClient.sharedClient sendEvent:<#(nonnull SentryEvent *)#> withCompletionHandler:<#^(NSError * _Nullable error)completionHandler#>;
+         }
 }
 
 - (void)startCrashReporting {
