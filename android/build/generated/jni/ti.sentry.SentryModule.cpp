@@ -1,6 +1,6 @@
 /**
  * Appcelerator Titanium Mobile
- * Copyright (c) 2011-2017 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2011-2018 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
  */
@@ -56,7 +56,7 @@ void SentryModule::bindProxy(Local<Object> exports, Local<Context> context)
 		titanium::V8Util::fatalException(isolate, tryCatch);
 		return;
 	}
-	exports->Set(nameSymbol, moduleInstance);
+	exports->Set(context, nameSymbol, moduleInstance);
 }
 
 void SentryModule::dispose(Isolate* isolate)
@@ -69,8 +69,9 @@ void SentryModule::dispose(Isolate* isolate)
 	titanium::KrollModule::dispose(isolate);
 }
 
-Local<FunctionTemplate> SentryModule::getProxyTemplate(Isolate* isolate)
+Local<FunctionTemplate> SentryModule::getProxyTemplate(v8::Isolate* isolate)
 {
+	Local<Context> context = isolate->GetCurrentContext();
 	if (!proxyTemplate.IsEmpty()) {
 		return proxyTemplate.Get(isolate);
 	}
@@ -83,13 +84,14 @@ Local<FunctionTemplate> SentryModule::getProxyTemplate(Isolate* isolate)
 	// use symbol over string for efficiency
 	Local<String> nameSymbol = NEW_SYMBOL(isolate, "Sentry");
 
-	Local<FunctionTemplate> t = titanium::Proxy::inheritProxyTemplate(isolate,
-		titanium::KrollModule::getProxyTemplate(isolate)
-, javaClass, nameSymbol);
+	Local<FunctionTemplate> t = titanium::Proxy::inheritProxyTemplate(
+		isolate,
+		titanium::KrollModule::getProxyTemplate(isolate),
+		javaClass,
+		nameSymbol);
 
 	proxyTemplate.Reset(isolate, t);
-	t->Set(titanium::Proxy::inheritSymbol.Get(isolate),
-		FunctionTemplate::New(isolate, titanium::Proxy::inherit<SentryModule>));
+	t->Set(titanium::Proxy::inheritSymbol.Get(isolate), FunctionTemplate::New(isolate, titanium::Proxy::inherit<SentryModule>));
 
 	// Method bindings --------------------------------------------------------
 	titanium::SetProtoMethod(isolate, t, "stopCrashReporting", SentryModule::stopCrashReporting);
@@ -117,11 +119,17 @@ Local<FunctionTemplate> SentryModule::getProxyTemplate(Isolate* isolate)
 	return scope.Escape(t);
 }
 
+Local<FunctionTemplate> SentryModule::getProxyTemplate(v8::Local<v8::Context> context)
+{
+	return getProxyTemplate(context->GetIsolate());
+}
+
 // Methods --------------------------------------------------------------------
 void SentryModule::stopCrashReporting(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "stopCrashReporting()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -141,16 +149,28 @@ void SentryModule::stopCrashReporting(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	jvalue* jArguments = 0;
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -172,6 +192,7 @@ void SentryModule::startCrashReporting(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "startCrashReporting()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -191,16 +212,28 @@ void SentryModule::startCrashReporting(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	jvalue* jArguments = 0;
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -222,6 +255,7 @@ void SentryModule::captureMessage(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "captureMessage()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -241,12 +275,19 @@ void SentryModule::captureMessage(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 1) {
 		char errorStringBuffer[100];
@@ -261,7 +302,6 @@ void SentryModule::captureMessage(const FunctionCallbackInfo<Value>& args)
 
 
 	
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -272,7 +312,12 @@ void SentryModule::captureMessage(const FunctionCallbackInfo<Value>& args)
 		jArguments[0].l = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -297,6 +342,7 @@ void SentryModule::addBreadcrumb(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "addBreadcrumb()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -316,12 +362,19 @@ void SentryModule::addBreadcrumb(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 2) {
 		char errorStringBuffer[100];
@@ -336,7 +389,6 @@ void SentryModule::addBreadcrumb(const FunctionCallbackInfo<Value>& args)
 
 
 	
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -348,7 +400,6 @@ void SentryModule::addBreadcrumb(const FunctionCallbackInfo<Value>& args)
 	}
 
 	
-
 	if (!args[1]->IsNull()) {
 		Local<Value> arg_1 = args[1];
 		jArguments[1].l =
@@ -359,7 +410,12 @@ void SentryModule::addBreadcrumb(const FunctionCallbackInfo<Value>& args)
 		jArguments[1].l = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -387,6 +443,7 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 {
 	LOGD(TAG, "addNavigationBreadcrumb()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -406,12 +463,19 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 3) {
 		char errorStringBuffer[100];
@@ -426,7 +490,6 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 
 
 	
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -438,7 +501,6 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 	}
 
 	
-
 	if (!args[1]->IsNull()) {
 		Local<Value> arg_1 = args[1];
 		jArguments[1].l =
@@ -450,7 +512,6 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 	}
 
 	
-
 	if (!args[2]->IsNull()) {
 		Local<Value> arg_2 = args[2];
 		jArguments[2].l =
@@ -461,7 +522,12 @@ void SentryModule::addNavigationBreadcrumb(const FunctionCallbackInfo<Value>& ar
 		jArguments[2].l = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -492,6 +558,7 @@ void SentryModule::setDSN(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "setDSN()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -511,12 +578,19 @@ void SentryModule::setDSN(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 1) {
 		char errorStringBuffer[100];
@@ -531,7 +605,6 @@ void SentryModule::setDSN(const FunctionCallbackInfo<Value>& args)
 
 
 	
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -542,7 +615,12 @@ void SentryModule::setDSN(const FunctionCallbackInfo<Value>& args)
 		jArguments[0].l = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -567,6 +645,7 @@ void SentryModule::addHttpBreadcrumb(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "addHttpBreadcrumb()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -586,12 +665,19 @@ void SentryModule::addHttpBreadcrumb(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 3) {
 		char errorStringBuffer[100];
@@ -606,7 +692,6 @@ void SentryModule::addHttpBreadcrumb(const FunctionCallbackInfo<Value>& args)
 
 
 	
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -618,7 +703,6 @@ void SentryModule::addHttpBreadcrumb(const FunctionCallbackInfo<Value>& args)
 	}
 
 	
-
 	if (!args[1]->IsNull()) {
 		Local<Value> arg_1 = args[1];
 		jArguments[1].l =
@@ -630,23 +714,34 @@ void SentryModule::addHttpBreadcrumb(const FunctionCallbackInfo<Value>& args)
 	}
 
 	
-
-		if ((titanium::V8Util::isNaN(isolate, args[2]) && !args[2]->IsUndefined()) || args[2]->ToString(isolate)->Length() == 0) {
+		if ((titanium::V8Util::isNaN(isolate, args[2]) && !args[2]->IsUndefined()) || args[2]->ToString(context).FromMaybe(String::Empty(isolate))->Length() == 0) {
 			const char *error = "Invalid value, expected type Number.";
 			LOGE(TAG, error);
 			titanium::JSException::Error(isolate, error);
 			return;
 		}
-	if (!args[2]->IsNull()) {
-		Local<Number> arg_2 = args[2]->ToNumber(isolate);
-		jArguments[2].i =
-			titanium::TypeConverter::jsNumberToJavaInt(
-				env, arg_2);
+		if (!args[2]->IsNull()) {
+		MaybeLocal<Number> arg_2 = args[2]->ToNumber(context);
+		if (arg_2.IsEmpty()) {
+			const char *error = "Invalid argument at index 2, expected type Number and failed to coerce.";
+			LOGE(TAG, error);
+			titanium::JSException::Error(isolate, error);
+			return;
+		} else {
+			jArguments[2].i =
+				titanium::TypeConverter::jsNumberToJavaInt(
+					env, arg_2.ToLocalChecked());
+		}
 	} else {
 		jArguments[2].i = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
@@ -674,6 +769,7 @@ void SentryModule::captureEvent(const FunctionCallbackInfo<Value>& args)
 {
 	LOGD(TAG, "captureEvent()");
 	Isolate* isolate = args.GetIsolate();
+	Local<Context> context = isolate->GetCurrentContext();
 	HandleScope scope(isolate);
 
 	JNIEnv *env = titanium::JNIScope::getEnv();
@@ -693,12 +789,19 @@ void SentryModule::captureEvent(const FunctionCallbackInfo<Value>& args)
 	}
 
 	Local<Object> holder = args.Holder();
-	// If holder isn't the JavaObject wrapper we expect, look up the prototype chain
 	if (!JavaObject::isJavaObject(holder)) {
 		holder = holder->FindInstanceInPrototypeChain(getProxyTemplate(isolate));
 	}
-
+	if (holder.IsEmpty() || holder->IsNull()) {
+		LOGE(TAG, "Couldn't obtain argument holder");
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	titanium::Proxy* proxy = NativeObject::Unwrap<titanium::Proxy>(holder);
+	if (!proxy) {
+		args.GetReturnValue().Set(Undefined(isolate));
+		return;
+	}
 
 	if (args.Length() < 1) {
 		char errorStringBuffer[100];
@@ -713,7 +816,6 @@ void SentryModule::captureEvent(const FunctionCallbackInfo<Value>& args)
 
 
 	bool isNew_0;
-
 	if (!args[0]->IsNull()) {
 		Local<Value> arg_0 = args[0];
 		jArguments[0].l =
@@ -724,7 +826,12 @@ void SentryModule::captureEvent(const FunctionCallbackInfo<Value>& args)
 		jArguments[0].l = NULL;
 	}
 
+
 	jobject javaProxy = proxy->getJavaObject();
+	if (javaProxy == NULL) {
+		args.GetReturnValue().Set(v8::Undefined(isolate));
+		return;
+	}
 	env->CallVoidMethodA(javaProxy, methodID, jArguments);
 
 	proxy->unreferenceJavaObject(javaProxy);
